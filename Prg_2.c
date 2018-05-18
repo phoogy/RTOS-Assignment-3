@@ -3,7 +3,7 @@
  * Project: Assignment 3 - Prg_2
  * Name: Phong Au
  * Student Number: 10692820
- * Compile Command: gcc -o Prg_1 Prg_1.c -pthread
+ * Compile Command: gcc -o Prg_2 Prg_2.c -pthread
  * Run Command : ./Prg_2
  */
 
@@ -24,6 +24,7 @@
 #define MESSLENGTH 1024
 #define NB_PROCESSES 9
 
+/* Struct */
 struct Data{
     int avail[3];
     char processId[NB_PROCESSES][MESSLENGTH];
@@ -31,37 +32,41 @@ struct Data{
     int req[3][NB_PROCESSES];
 };
 
-
 /* Process Input File */
 void readDataFromFile(struct Data *data)
 {
+    /* Declare and Initialise Variables */
     FILE * inputFile;
-    inputFile = fopen(INPUT_FILE, "r");
-
-    if(inputFile == NULL)
-    {
-        perror("fopen");
-        exit(0);
-    }
-
     char procId[MESSLENGTH];
     int allocA, allocB, allocC, reqA,reqB,reqC, availA, availB,availC;
     char processId[MESSLENGTH];
     int matched;
     int i = 0;
 
+    /* Open File */
+    inputFile = fopen(INPUT_FILE, "r");
+    if(inputFile == NULL)
+    {
+        perror("fopen");
+        exit(0);
+    }
+
+
+    /* While not end of file */
     while (matched != EOF)
     {
-        matched = fscanf(inputFile, "%s %d %d %d %d %d %d %d %d %d",
+        /* Read in data */
+        matched = fscanf(inputFile,
+            "%s %d %d %d %d %d %d %d %d %d",
             procId,
             &allocA, &allocB, &allocC,
             &reqA, &reqB, &reqC,
-            &availA, &availB, &availC);
+            &availA, &availB, &availC
+        );
 
+        /* If found valid matches of data */
         if(matched == 7 || matched == 10)
         {
-            //printf("size of procId: %d\n")
-            //procId[2] = '0/';
             strcpy(data->processId[i],procId);
             data->alloc[0][i] = allocA;
             data->alloc[1][i] = allocB;
@@ -75,10 +80,11 @@ void readDataFromFile(struct Data *data)
                 data->avail[0] = availA;
                 data->avail[1] = availB;
                 data->avail[2] = availC;
+
                 printf("Available: %d %d %d\n", data->avail[0],data->avail[1],data->avail[2]);
             }
-            printf("%s %d %d %d   %d %d %d\n", data->processId[i], data->alloc[0][i], data->alloc[1][i], data->alloc[2][i], data->req[0][i], data->req[1][i], data->req[2][i]);
 
+            printf("%s %d %d %d   %d %d %d\n", data->processId[i], data->alloc[0][i], data->alloc[1][i], data->alloc[2][i], data->req[0][i], data->req[1][i], data->req[2][i]);
             i++;
         }
     }
@@ -90,8 +96,6 @@ void signalFunction(int sig)
 {
 	if(sig == SIGUSR1 || sig == SIGUSR2)
 		printf("Finished Writing to file\n");
-
-    //exit(0);
 }
 
 /* Function appendToFile
@@ -127,6 +131,7 @@ void appendToFile(char filename[1024], char text[MESSLENGTH])
 /* Detect Deadlocks */
 void detectDeadlocks(struct Data *data)
 {
+    /* Declare and initialise data */
     int a = 0, b = 1, c = 2;
 	int finished[NB_PROCESSES];
     int work[3];
@@ -141,24 +146,28 @@ void detectDeadlocks(struct Data *data)
     int deadlock = 0;
     int first = 1;
 
+    /* Set starting work */
     for(i = 0; i < 3; i++)
     {
         work[i] = data->avail[i];
         prevWork[i] = work[i];
     }
 
+    /* Set Finished to false */
     for (i = 0; i < NB_PROCESSES; i++)
         finished[i] = 0;
 
+    /* Start Loop */
 	for (i = 0; allFinished == 0; i++)
 	{
 
 		/* Reset loop through processes */
 		if (i >= NB_PROCESSES)
 		{
+            /* If work from previous loop the same as current work */
 			if (work[a] == prevWork[a] && work[b] == prevWork[b] && work[c] == prevWork[c])
 			{
-				//allFinished = 0;
+                /* Check finished or not */
 				for(j = 0; j < NB_PROCESSES; j++)
 				{
 					if(j==0)
@@ -167,6 +176,7 @@ void detectDeadlocks(struct Data *data)
 						allFinished &= finished[j];
 				}
 
+                /* Check if deadlocked */
 				if (allFinished == 0)
 				{
                     sprintf(temp,", DEADLOCKED\n");
@@ -174,54 +184,60 @@ void detectDeadlocks(struct Data *data)
                     sprintf(temp, "DEADLOCKED\n");
                     strcat(result2,temp);
 				}
-
 				break;
 			}
-			//printf("No Potential Deadlocks\n");
-			i = 0;
+
+			/* Increment Loop count and reset data */
 			loop++;
+			i = 0;
 			deadlock = 0;
-			//sprintf(temp,"Loop %d: \n", loopNb);
-			//strcat(deadlocks,temp);
-            //printf("A = %d:%d  B = %d:%d  C = %d:%d\n",prevWork[a],work[a],prevWork[b],work[b],prevWork[c],work[c]);
+
+			/* Update previous work */
 			prevWork[a] = work[a];
 			prevWork[b] = work[b];
 			prevWork[c] = work[c];
-
-
-			//sleep(1);
 		}
 
 		/* If not finished and request <= availabile */
-
 		if(finished[i] == 0)
 		{
+            /* Check request is less than work */
             if(data->req[a][i] <= work[a]
             && data->req[b][i] <= work[b]
             && data->req[c][i] <= work[c])
             {
+                /* Update work */
                 work[a] += data->alloc[a][i];
 				work[b] += data->alloc[b][i];
 				work[c] += data->alloc[c][i];
-				finished[i] = 1;
-				if (first == 1)
-                {
-                    sprintf(temp,"%s", data->processId[i]);
-                    first = 0;
-                }
 
+                /* Set process to finished */
+				finished[i] = 1;
+
+                /* Just checking to put ',' or not */
+				if (first == 1)
+                    sprintf(temp,"%s", data->processId[i]);
                 else
                     sprintf(temp,", %s", data->processId[i]);
+                first = 0;
+
+                /* Append line to result 1 */
 				strcat(result1,temp);
             }
             else
             {
+                /* If no dead lock was found before this potential deadlock */
                 if(deadlock == 0)
                 {
+                    /* Set deadlock to true */
                     deadlock = 1;
+
+                    /* Loop Number */
                     sprintf(temp, "Loop %d:\n",loop);
                     strcat(result2,temp);
                 }
+
+                /* Result of process */
                 sprintf(temp, "%s\tRequested: %d %d %d\tAllocated: %d %d %d\t Work: %d %d %d\n",
                 data->processId[i],
                 data->req[a][i],
@@ -234,24 +250,12 @@ void detectDeadlocks(struct Data *data)
                 work[b],
                 work[c]);
 
+                /* Append result to result2 for writing to file later */
                 strcat(result2,temp);
-
-                //printf("%s",temp);
-
-                ///* Signal finished writing with SIGUSR1 */
-                // if(signal(SIGUSR1, signalFunction) == SIG_ERR) {
-                    // exit(0);
-                // }
-
-
             }
-
 		}
-
-        //printf("%d\n",i);
-        //sleep(1);
-
 	}
+
 	/* Append data to file */
 	//if(allFinished)
         appendToFile(OUTPUT_FILE,result1);
@@ -261,6 +265,7 @@ void detectDeadlocks(struct Data *data)
     printf("Result 1:\n%s\n\n",result1);
     printf("Result 2:\n%s\n\n",result2);
 
+    /* Signal finished writing with SIGUSR1 */
     kill(getpid(),SIGUSR1);
 }
 
@@ -268,7 +273,6 @@ void detectDeadlocks(struct Data *data)
 /* Function main */
 int main(void)
 {
-
     /* Clear output file if it exists */
     FILE *dataFile;
     if ((dataFile = fopen(OUTPUT_FILE, "w")) != NULL)
@@ -284,77 +288,8 @@ int main(void)
     struct Data data;
 
     readDataFromFile(&data);
-
-//    int i;
-//    for (i = 0;i < NB_PROCESSES; i++){
-//        printf("%s %d %d %d   %d %d %d\n",
-//        data.processId[i],
-//        data.alloc[0][i],
-//        data.alloc[1][i],
-//        data.alloc[2][i],
-//        data.req[0][i],
-//        data.req[1][i],
-//        data.req[2][i]);
-//    }
-
-
-
+    printf("\n");
     detectDeadlocks(&data);
-//	FILE *readFile;
-//	FILE *writeFile;
-//	char line[MESSLENGTH];
-//	int i;
-//	int processId[MESSLENGTH];
-//	int processNb = 9;
-
-
-
-
-
-
-	/* Loop through processes forever */
-	//int loopNb = 1;
-
-	//char temp[MESSLENGTH];
-	//sprintf(temp, "Loop %d: \n", loopNb);
-
-	//strcat(deadlocks,temp);
-
-
-
-
-
-	/* Signal stuff */
-
-
-	 //struct sigaction act;
-
-    //act.sa_handler = ouch; /* Pointer to function. */
-
-//    if(sigemptyset(&act.sa_mask) < 0)
-//    {
-//		printf("Error: sigemptyset() failed, terminating!\n");
-//		exit(1);
-//    }
-//    act.sa_flags = 0;
-//
-//    if(sigaction(SIGINT, &act, 0) < 0)
-//    {
-//		printf("Error: sigaction() failed, terminating!\n");
-//        exit(2);
-//    }
-//
-//
-//	while(1)
-//    {
-//       printf("Waiting to catch signal. PID: %d!\n",getpid());
-//
-//       sleep(1);
-//    }
-
-
-
-
 
 	return 0;
 }
