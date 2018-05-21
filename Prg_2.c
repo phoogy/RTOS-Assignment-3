@@ -39,7 +39,6 @@ void readDataFromFile(struct Data *data)
     FILE * inputFile;
     char procId[MESSLENGTH];
     int allocA, allocB, allocC, reqA,reqB,reqC, availA, availB,availC;
-    char processId[MESSLENGTH];
     int matched;
     int i = 0;
 
@@ -81,10 +80,10 @@ void readDataFromFile(struct Data *data)
                 data->avail[1] = availB;
                 data->avail[2] = availC;
 
-                printf("Available: %d %d %d\n", data->avail[0],data->avail[1],data->avail[2]);
+                //printf("Available: %d %d %d\n", data->avail[0],data->avail[1],data->avail[2]);
             }
 
-            printf("%s %d %d %d   %d %d %d\n", data->processId[i], data->alloc[0][i], data->alloc[1][i], data->alloc[2][i], data->req[0][i], data->req[1][i], data->req[2][i]);
+            //printf("%s %d %d %d   %d %d %d\n", data->processId[i], data->alloc[0][i], data->alloc[1][i], data->alloc[2][i], data->req[0][i], data->req[1][i], data->req[2][i]);
             i++;
         }
     }
@@ -95,7 +94,8 @@ void readDataFromFile(struct Data *data)
 void signalFunction(int sig)
 {
 	if(sig == SIGUSR1 || sig == SIGUSR2)
-		printf("Finished Writing to file\n");
+		printf("Writing to output_topic2.txt has finished\n");
+
 }
 
 /* Function appendToFile
@@ -184,6 +184,11 @@ void detectDeadlocks(struct Data *data)
                     sprintf(temp, "DEADLOCKED\n");
                     strcat(result2,temp);
 				}
+				else
+				{
+					sprintf(temp,"\n");
+                    strcat(result1,temp);
+				}
 				break;
 			}
 
@@ -233,7 +238,7 @@ void detectDeadlocks(struct Data *data)
                     deadlock = 1;
 
                     /* Loop Number */
-                    sprintf(temp, "Loop %d:\n",loop);
+                    sprintf(temp, "\nAt loop %d:\n",loop);
                     strcat(result2,temp);
                 }
 
@@ -257,13 +262,14 @@ void detectDeadlocks(struct Data *data)
 	}
 
 	/* Append data to file */
-	//if(allFinished)
-        appendToFile(OUTPUT_FILE,result1);
-    //else
-        appendToFile(OUTPUT_FILE,result2);
+    appendToFile(OUTPUT_FILE,result1);
+    //printf("%s\n",result1);
 
-    printf("Result 1:\n%s\n\n",result1);
-    printf("Result 2:\n%s\n\n",result2);
+    if(!allFinished)
+    {
+        appendToFile(OUTPUT_FILE,result2);
+        //printf("%s\n",result2);
+    }
 
     /* Signal finished writing with SIGUSR1 */
     kill(getpid(),SIGUSR1);
@@ -288,7 +294,7 @@ int main(void)
     struct Data data;
 
     readDataFromFile(&data);
-    printf("\n");
+    //printf("\n");
     detectDeadlocks(&data);
 
 	return 0;
